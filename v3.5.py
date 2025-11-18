@@ -21,10 +21,327 @@ from openpyxl import Workbook
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTextEdit,
     QRadioButton, QLineEdit, QLabel, QProgressBar, QFileDialog, QCheckBox,
-    QMessageBox, QTabWidget, QGroupBox, QComboBox, QSpinBox, QLayout
+    QMessageBox, QTabWidget, QGroupBox, QComboBox, QSpinBox, QLayout,
+    QScrollArea, QFrame
 )
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
 from PyQt6.QtGui import QPixmap
+
+DARK_STYLE = """
+/* ---------- ROOT ---------- */
+QWidget {
+    background-color: transparent;      /* filhos NÃO recebem fundo sólido */
+    color: #E5E7EB;
+    font-family: Segoe UI, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    font-size: 11pt;
+}
+
+/* fundo só na janela principal */
+QWidget#MainApp {
+    background-color: #050816;
+}
+
+/* ---------- TABS ---------- */
+QTabWidget::pane {
+    border: none;
+    background: transparent;
+}
+QTabBar { qproperty-drawBase: 0; }
+QTabBar::tab {
+    background-color: #111827;
+    color: #9CA3AF;
+    padding: 8px 22px;
+    margin: 0 6px;
+    border-radius: 18px;
+    border: 1px solid transparent;
+    font-weight: 500;
+}
+QTabBar::tab:selected {
+    background-color: #7F22FE;
+    color: #FFFFFF;
+    border-color: #7F22FE;
+}
+QTabBar::tab:hover:!selected {
+    background-color: #1F2937;
+    color: #E5E7EB;
+}
+
+/* ---------- TITLES ---------- */
+QLabel#Title {
+    font-size: 18pt;
+    font-weight: 600;
+    color: #F9FAFB;
+}
+
+/* ---------- TEXT INPUTS ---------- */
+QLineEdit,
+QTextEdit,
+QPlainTextEdit {
+    background-color: #0B1020;
+    color: #E5E7EB;
+    border-radius: 16px;
+    padding: 8px 12px;
+    border: 1px solid #111827;
+    selection-background-color: #7F22FE;
+    selection-color: #FFFFFF;
+}
+QLineEdit:focus,
+QTextEdit:focus,
+QPlainTextEdit:focus {
+    border: 1px solid #7F22FE;
+}
+
+/* ---------- BUTTONS ---------- */
+QPushButton {
+    background-color: #111827;
+    color: #E5E7EB;
+    border-radius: 18px;
+    padding: 8px 18px;
+    border: 1px solid #1F2937;
+    font-weight: 500;
+}
+QPushButton:hover {
+    background-color: #1F2937;
+}
+QPushButton:pressed {
+    background-color: #020817;
+}
+QPushButton[accent="true"],
+QPushButton#accent {
+    background-color: #7F22FE;
+    color: #FFFFFF;
+    border: none;
+}
+QPushButton[accent="true"]:hover,
+QPushButton#accent:hover {
+    background-color: #9F4CFF;
+}
+
+/* ---------- GROUPBOX (padrão leve) ---------- */
+QGroupBox {
+    border: none;
+    margin-top: 12px;
+    padding-top: 4px;
+    color: #9CA3AF;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 0;
+    padding: 0 6px;
+    color: #9CA3AF;
+    background-color: transparent;
+    font-weight: 500;
+}
+
+/* ---------- CARDS EXPLÍCITOS ---------- */
+QWidget#card {
+    background-color: #0B1020;
+    border-radius: 22px;
+    border: 1px solid #111827;
+    padding: 16px;
+    margin-top: 12px;
+}
+
+/* ---------- CHAT BUBBLES ---------- */
+QLabel#userBubble {
+    background-color: #7F22FE;
+    color: #FFFFFF;
+    border-radius: 18px;
+    padding: 8px 14px;
+    margin: 4px 0;
+}
+
+QLabel#botBubble {
+    background-color: #111827;
+    color: #E5E7EB;
+    border-radius: 18px;
+    padding: 8px 14px;
+    margin: 4px 0;
+}
+
+QLabel#logBubble {
+    background-color: #050816;
+    color: #9CA3AF;
+    border-radius: 12px;
+    padding: 4px 10px;
+    margin: 2px 0;
+    font-size: 9pt;
+}
+
+/* pill status no topo direito */
+QLabel#chatStatusPill {
+    background-color: #7F22FE;
+    color: #FFFFFF;
+    border-radius: 18px;
+    padding: 6px 16px;
+    font-weight: 500;
+}
+
+
+/* ---------- CHECKBOX / RADIO (ajuste sem faixas) ---------- */
+QCheckBox,
+QRadioButton {
+    color: #E5E7EB;
+    spacing: 8px;
+    background: transparent;       /* remove faixa */
+}
+
+QCheckBox::indicator,
+QRadioButton::indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid #4B5563;
+    background-color: #0B1020;     /* fundo neutro */
+}
+
+QCheckBox::indicator:checked,
+QRadioButton::indicator:checked {
+    background-color: #7F22FE;
+    border-color: #7F22FE;
+}
+
+QCheckBox::indicator:hover,
+QRadioButton::indicator:hover {
+    border-color: #9F4CFF;
+}
+
+
+/* ---------- COMBOBOX (Dropdown) ---------- */
+QComboBox {
+    background-color: #0B1020;
+    color: #E5E7EB;
+    border-radius: 16px;
+    padding: 6px 12px;
+    border: 1px solid #111827;
+}
+QComboBox:focus {
+    border: 1px solid #7F22FE;
+}
+QComboBox::drop-down {
+    width: 22px;
+    border: none;
+}
+QComboBox::down-arrow {
+    image: none;
+    border: none;
+    width: 0;
+    height: 0;
+    margin-right: 6px;
+    /* triângulo minimalista */
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #9CA3AF;
+}
+QComboBox QAbstractItemView {
+    background-color: #050816;
+    border: 1px solid #111827;
+    selection-background-color: #7F22FE;
+    selection-color: #FFFFFF;
+}
+
+/* ---------- SPINBOX (Quality, etc.) ---------- */
+QSpinBox {
+    background-color: #0B1020;
+    color: #E5E7EB;
+    border-radius: 16px;
+    border: 1px solid #111827;
+    padding-left: 10px;
+    padding-right: 26px;  /* espaço pros botões up/down */
+}
+
+QSpinBox:focus {
+    border: 1px solid #7F22FE;
+}
+
+/* botões up/down minimalistas */
+QSpinBox::up-button,
+QSpinBox::down-button {
+    subcontrol-origin: border;
+    width: 14px;
+    border: none;
+    background: transparent;
+    margin-right: 6px;
+}
+
+QSpinBox::up-button {
+    subcontrol-position: right top;
+}
+QSpinBox::down-button {
+    subcontrol-position: right bottom;
+}
+
+/* desenha setinhas simples */
+QSpinBox::up-arrow,
+QSpinBox::down-arrow {
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+}
+
+QSpinBox::up-arrow {
+    border-bottom: 6px solid #9CA3AF;
+}
+QSpinBox::down-arrow {
+    border-top: 6px solid #9CA3AF;
+}
+
+QSpinBox::up-button:hover,
+QSpinBox::down-button:hover {
+    background-color: #111827;
+}
+
+/* ---------- PROGRESS BAR ---------- */
+QProgressBar {
+    background-color: #050816;
+    border-radius: 12px;
+    border: 1px solid #111827;
+    text-align: center;
+    color: #9CA3AF;
+    padding: 2px;
+}
+QProgressBar::chunk {
+    background-color: #7F22FE;
+    border-radius: 10px;
+}
+
+/* ---------- SCROLLBARS ---------- */
+QScrollBar:vertical,
+QScrollBar:horizontal {
+    background: transparent;
+    border: none;
+    margin: 4px;
+}
+QScrollBar::handle:vertical,
+QScrollBar::handle:horizontal {
+    background: #111827;
+    border-radius: 8px;
+    min-height: 24px;
+    min-width: 24px;
+}
+QScrollBar::handle:hover {
+    background: #1F2937;
+}
+QScrollBar::add-line,
+QScrollBar::sub-line {
+    height: 0;
+    width: 0;
+    background: transparent;
+    border: none;
+}
+
+/* ---------- TOOLTIP ---------- */
+QToolTip {
+    background-color: #111827;
+    color: #E5E7EB;
+    border-radius: 8px;
+    padding: 6px 10px;
+    border: 1px solid #7F22FE;
+}
+"""
+
 
 # Disable insecure request warnings (e.g., for SSL verification)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -226,6 +543,230 @@ class CrawlerThread(QThread):
         except Exception as e:
             self.log_update.emit(f"Failed to process {url}: {e}")
         return None
+
+class BrokenLinkWorker(QThread):
+    """
+    Worker para 'Broken Link Inspector':
+    - mode: 'single' (single page checkup) ou 'sitemap'
+    - root_url: URL base (página ou sitemap.xml)
+    - same_domain_only: se True, filtra apenas links do mesmo domínio (single page)
+    """
+    progress_update = pyqtSignal(int)
+    log_update = pyqtSignal(str)
+    finished = pyqtSignal(list)  # lista de resultados
+
+    def __init__(self, mode: str, root_url: str, same_domain_only: bool = True, max_concurrency: int = 10):
+        super().__init__()
+        self.mode = mode
+        self.root_url = root_url.strip()
+        self.same_domain_only = same_domain_only
+        self.max_concurrency = max_concurrency
+        self._stop_requested = False
+        self.results = []
+
+    def stop(self):
+        self._stop_requested = True
+
+    def run(self):
+        try:
+            asyncio.run(self.main())
+        except Exception as e:
+            self.log_update.emit(f"[ERROR] BrokenLinkWorker crashed: {e}")
+        finally:
+            self.finished.emit(self.results)
+
+    async def main(self):
+        self.log_update.emit(f"[INIT] Broken Link Inspector mode = {self.mode}, URL = {self.root_url}")
+
+        async with aiohttp.ClientSession(headers=HEADERS) as session:
+            if self.mode == "single":
+                urls = await self._collect_links_from_page(self.root_url, session)
+            elif self.mode == "sitemap":
+                urls = await self._collect_from_sitemap(self.root_url, session)
+            else:
+                self.log_update.emit(f"[ERROR] Unknown mode: {self.mode}")
+                urls = []
+
+            urls = list(dict.fromkeys(urls))  # dedupe preservando ordem
+            total = len(urls)
+            if total == 0:
+                self.log_update.emit("[INFO] No URLs to check.")
+                self.progress_update.emit(100)
+                return
+
+            self.log_update.emit(f"[INFO] {total} URL(s) to check.")
+            sem = asyncio.Semaphore(self.max_concurrency)
+
+            async def runner():
+                done = 0
+                tasks = [
+                    self._check_one(url, session, sem)
+                    for url in urls
+                ]
+                for coro in asyncio.as_completed(tasks):
+                    if self._stop_requested:
+                        self.log_update.emit("[WARN] Stop requested. Aborting remaining checks.")
+                        break
+                    result = await coro
+                    if result is not None:
+                        self.results.append(result)
+                    done += 1
+                    progress = int(done * 100 / total)
+                    self.progress_update.emit(progress)
+
+            await runner()
+            self.progress_update.emit(100)
+            self.log_update.emit("[DONE] Broken Link Inspector finished.")
+
+    async def _collect_links_from_page(self, page_url: str, session: aiohttp.ClientSession):
+        urls = []
+        try:
+            self.log_update.emit(f"[FETCH] Loading page: {page_url}")
+            async with session.get(page_url, ssl=False, timeout=30) as resp:
+                html = await resp.text(errors="ignore")
+        except Exception as e:
+            self.log_update.emit(f"[ERROR] Could not load page: {page_url} – {e}")
+            return urls
+
+        base = urlparse(page_url)
+        soup = BeautifulSoup(html, "html.parser")
+
+        for a in soup.find_all("a", href=True):
+            href = a["href"].strip()
+            if not href or href.startswith("javascript:") or href.startswith("#"):
+                continue
+            full_url = urljoin(page_url, href)
+            parsed = urlparse(full_url)
+            if parsed.scheme not in ("http", "https"):
+                continue
+            if self.same_domain_only and parsed.netloc != base.netloc:
+                continue
+            urls.append(full_url)
+
+        self.log_update.emit(f"[INFO] Found {len(urls)} links on page (after filtering).")
+        return urls
+
+    async def _collect_from_sitemap(self, sitemap_url: str, session: aiohttp.ClientSession):
+        import xml.etree.ElementTree as ET
+        urls = []
+        submaps = []
+
+        self.log_update.emit(f"[FETCH] Loading sitemap root: {sitemap_url}")
+        xml_root = await self._fetch_xml(sitemap_url, session)
+        if not xml_root:
+            return urls
+
+        try:
+            root = ET.fromstring(xml_root)
+        except Exception as e:
+            self.log_update.emit(f"[ERROR] Could not parse root sitemap XML: {e}")
+            return urls
+
+        root_tag = root.tag.split('}')[-1].lower()
+
+        if root_tag == "sitemapindex":
+            self.log_update.emit("[INFO] Root is <sitemapindex> (has sub-sitemaps).")
+            for sm_loc in root.iterfind(".//{*}sitemap/{*}loc"):
+                if sm_loc.text:
+                    sm_url = sm_loc.text.strip()
+                    submaps.append(sm_url)
+
+            self.log_update.emit(f"[INFO] Found {len(submaps)} sub-sitemaps.")
+            for i, sm in enumerate(submaps, 1):
+                if self._stop_requested:
+                    break
+                self.log_update.emit(f"[FETCH] ({i}/{len(submaps)}) {sm}")
+                xml_sub = await self._fetch_xml(sm, session)
+                if not xml_sub:
+                    continue
+                try:
+                    r = ET.fromstring(xml_sub)
+                    for loc in r.iterfind(".//{*}url/{*}loc"):
+                        if loc.text:
+                            urls.append(loc.text.strip())
+                except Exception as e:
+                    self.log_update.emit(f"[PARSE ERROR] Could not parse sub-sitemap {sm}: {e}")
+
+        elif root_tag == "urlset":
+            self.log_update.emit("[INFO] Root is <urlset> (single sitemap).")
+            for loc in root.iterfind(".//{*}url/{*}loc"):
+                if loc.text:
+                    urls.append(loc.text.strip())
+        else:
+            self.log_update.emit(f"[WARN] Unknown sitemap root tag '{root_tag}', using generic <loc>.")
+            for loc in root.iterfind(".//{*}loc"):
+                if loc.text:
+                    urls.append(loc.text.strip())
+
+        self.log_update.emit(f"[INFO] Collected {len(urls)} URL(s) from sitemap.")
+        return urls
+
+    async def _fetch_xml(self, url: str, session: aiohttp.ClientSession):
+        try:
+            async with session.get(url, ssl=False, timeout=30) as r:
+                if r.status != 200:
+                    self.log_update.emit(f"[ERROR] {url} – status {r.status}")
+                    return None
+                return await r.text()
+        except Exception as e:
+            self.log_update.emit(f"[ERROR] {url} – {e}")
+            return None
+
+    async def _check_one(self, url: str, session: aiohttp.ClientSession, sem: asyncio.Semaphore):
+        async with sem:
+            if self._stop_requested:
+                return None
+
+            status = None
+            final_url = ""
+            error = ""
+
+            try:
+                # tenta HEAD primeiro, sem seguir redirects
+                try:
+                    async with session.head(url, ssl=False, allow_redirects=False, timeout=15) as resp:
+                        status = resp.status
+                        final_url = str(resp.url)
+
+                        # se for redirect, pega destino do Location
+                        if 300 <= status < 400:
+                            loc = resp.headers.get("Location")
+                            if loc:
+                                final_url = urljoin(url, loc)
+
+                except Exception:
+                    # fallback para GET, também sem seguir redirect
+                    async with session.get(url, ssl=False, allow_redirects=False, timeout=30) as resp:
+                        status = resp.status
+                        final_url = str(resp.url)
+
+                        if 300 <= status < 400:
+                            loc = resp.headers.get("Location")
+                            if loc:
+                                final_url = urljoin(url, loc)
+
+            except Exception as e:
+                error = str(e)
+
+            category = "network_error"
+            if status is not None:
+                if 200 <= status < 300:
+                    category = "ok"
+                elif 300 <= status < 400:
+                    category = "redirect"
+                elif 400 <= status < 500:
+                    category = "client_error"
+                elif status >= 500:
+                    category = "server_error"
+
+            return {
+                "url": url,
+                "status": status,
+                "final_url": final_url,
+                "error": error,
+                "category": category,
+            }
+
 
 class CrawlerGUI(QWidget):
     """GUI for the Web Crawler tool."""
@@ -538,7 +1079,7 @@ class AllImagesDownloaderGUI(QWidget):
         layout.addWidget(auth_group)
 
         # --- Compression Options ---
-        compress_group = QGroupBox("Compression Options")
+        compress_group = QGroupBox("Extract Options")
         compress_group.setCheckable(True)
         compress_group.setChecked(False)
         compress_layout = QHBoxLayout(compress_group)
@@ -1059,7 +1600,7 @@ class ImageResizerGUI(QWidget):
         single_file_layout.addLayout(self._create_h_layout([self.output_file, browse_output_file_btn]))
 
         # --- Resize Options ---
-        resize_group = QGroupBox("Resize Options")
+        resize_group = QGroupBox("Extract Options")
         resize_layout = QHBoxLayout(resize_group)
         self.ratio_mode_combo = QComboBox()
         self.ratio_mode_combo.addItems(["Original Ratio", "Free (no constraint)"] + list(self.preset_ratios.keys()))
@@ -1293,8 +1834,870 @@ class AboutTab(QWidget):
 
         layout.addWidget(info_label)
         self.setLayout(layout)
+class ChatbotTab(QWidget):
+    """
+    Aba 'Assistant' em estilo dashboard:
+    - Card de chat com bubbles
+    - Pill de status no topo direito
+    - Atalhos como mini-cards
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.main_app = parent
+        self.downloader_thread = None
+        self.initUI()
 
-# --------------------- Main Application ---------------------
+    def initUI(self):
+        main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(16)
+
+        # ---------- Topo: título + pill de status à direita ----------
+        top_layout = QHBoxLayout()
+        title = QLabel("Assistant")
+        title.setObjectName("Title")
+        top_layout.addWidget(title)
+
+        self.top_status_pill = QLabel("Ready")
+        self.top_status_pill.setObjectName("chatStatusPill")
+        self.top_status_pill.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        top_layout.addStretch()
+        top_layout.addWidget(self.top_status_pill)
+        main_layout.addLayout(top_layout)
+
+        # ---------- Card principal do chat ----------
+        chat_card = QWidget()
+        chat_card.setObjectName("card")
+        chat_layout = QVBoxLayout(chat_card)
+        chat_layout.setContentsMargins(16, 16, 16, 16)
+        chat_layout.setSpacing(8)
+
+        # Scroll de mensagens com layout vertical
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        self.messages_container = QWidget()
+        self.messages_layout = QVBoxLayout(self.messages_container)
+        self.messages_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.scroll_area.setWidget(self.messages_container)
+
+        chat_layout.addWidget(self.scroll_area)
+        main_layout.addWidget(chat_card)
+
+        # ---------- Atalhos em mini-cards ----------
+        shortcuts_card = QWidget()
+        shortcuts_card.setObjectName("card")
+        shortcuts_layout = QHBoxLayout(shortcuts_card)
+        shortcuts_layout.setContentsMargins(16, 10, 16, 10)
+        shortcuts_layout.setSpacing(10)
+
+        lbl = QLabel("Sugestões:")
+        lbl.setStyleSheet("color: #9CA3AF;")
+        shortcuts_layout.addWidget(lbl)
+
+        btn_example = QPushButton("Baixar imagens de URLs")
+        btn_example.setProperty("accent", True)
+        btn_example.clicked.connect(self.fill_example_download)
+        shortcuts_layout.addWidget(btn_example)
+
+        shortcuts_layout.addStretch()
+        main_layout.addWidget(shortcuts_card)
+
+        # ---------- Input pill inferior ----------
+        input_card = QWidget()
+        input_card.setObjectName("card")
+        input_layout = QHBoxLayout(input_card)
+        input_layout.setContentsMargins(16, 10, 16, 10)
+        input_layout.setSpacing(10)
+
+        self.input_field = QLineEdit()
+        self.input_field.setPlaceholderText(
+            "Ex: Baixe as imagens de https://site1.com, https://site2.com"
+        )
+        send_button = QPushButton("Enviar")
+        send_button.setProperty("accent", True)
+
+        input_layout.addWidget(self.input_field)
+        input_layout.addWidget(send_button)
+        main_layout.addWidget(input_card)
+
+        # ---------- Status / progresso discreto ----------
+        self.status_label = QLabel("Status: Aguardando comando")
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setFixedHeight(8)
+        main_layout.addWidget(self.status_label)
+        main_layout.addWidget(self.progress_bar)
+
+        # Conexões
+        send_button.clicked.connect(self.handle_user_message)
+        self.input_field.returnPressed.connect(self.handle_user_message)
+
+    # ---------- Helpers de UI ----------
+
+    def fill_example_download(self):
+        self.input_field.setText(
+            "Baixe as imagens de https://www.exemplo1.com, https://www.exemplo2.com"
+        )
+        self.input_field.setFocus()
+
+    def _add_bubble(self, text, kind="bot"):
+        label = QLabel(text)
+        label.setWordWrap(True)
+        if kind == "user":
+            label.setObjectName("userBubble")
+            # alinha à esquerda/direita visualmente via layout wrapper
+            wrapper = QHBoxLayout()
+            wrapper.setContentsMargins(0, 0, 0, 0)
+            wrapper.addStretch()
+            wrapper.addWidget(label)
+            cont = QWidget()
+            cont.setLayout(wrapper)
+            self.messages_layout.addWidget(cont)
+        elif kind == "log":
+            label.setObjectName("logBubble")
+            self.messages_layout.addWidget(label)
+        else:
+            label.setObjectName("botBubble")
+            wrapper = QHBoxLayout()
+            wrapper.setContentsMargins(0, 0, 0, 0)
+            wrapper.addWidget(label)
+            wrapper.addStretch()
+            cont = QWidget()
+            cont.setLayout(wrapper)
+            self.messages_layout.addWidget(cont)
+
+        # autoscroll pro final
+        self.scroll_area.verticalScrollBar().setValue(
+            self.scroll_area.verticalScrollBar().maximum()
+        )
+
+    def append_message(self, sender, text):
+        if sender.lower().startswith("você"):
+            self._add_bubble(text, "user")
+        elif sender.lower().startswith("log"):
+            self._add_bubble(text, "log")
+        else:
+            self._add_bubble(text, "bot")
+
+    # ---------- Lógica do comando ----------
+
+    def handle_user_message(self):
+        text = self.input_field.text().strip()
+        if not text:
+            return
+        self.append_message("Você", text)
+        self.input_field.clear()
+        self.process_command(text)
+
+    def process_command(self, text):
+        lower = text.lower()
+
+        if "baixe as imagens" in lower or "baixar as imagens" in lower:
+            urls = self._extract_urls(text)
+            if not urls:
+                self.append_message(
+                    "Assistant",
+                    "Não encontrei URLs no comando.\n"
+                    "Exemplo: Baixe as imagens de https://site1.com, https://site2.com"
+                )
+                return
+            self.start_download_images_from_urls(urls)
+            return
+
+        self.append_message(
+            "Assistant",
+            "Ainda não aprendi esse tipo de comando 😅\n"
+            "No momento você pode pedir, por exemplo:\n"
+            "Baixe as imagens de https://site1.com, https://site2.com"
+        )
+
+    def _extract_urls(self, text):
+        pattern = r'https?://[^\s,;"]+'
+        return re.findall(pattern, text)
+
+    def start_download_images_from_urls(self, urls):
+        self.append_message(
+            "Assistant",
+            "Beleza, vou baixar as imagens destas URLs:\n- " + "\n- ".join(urls)
+        )
+
+        output_folder = QFileDialog.getExistingDirectory(
+            self, "Selecione a pasta para salvar as imagens"
+        )
+        if not output_folder:
+            self.append_message("Assistant", "Operação cancelada: nenhuma pasta selecionada.")
+            return
+
+        compress_options = {
+            'enabled': False,
+            'format': 'jpg',
+            'quality': 85
+        }
+
+        if self.downloader_thread and self.downloader_thread.isRunning():
+            self.downloader_thread.stop()
+            self.downloader_thread.wait()
+
+        self.downloader_thread = AllImagesDownloaderThread(
+            urls=urls,
+            save_folder=output_folder,
+            auth=None,
+            compress_options=compress_options
+        )
+
+        self.downloader_thread.progress.connect(self.update_progress)
+        self.downloader_thread.log.connect(lambda msg: self.append_message("Log", msg))
+        self.downloader_thread.finished.connect(self.download_finished)
+
+        self.status_label.setText("Status: Baixando imagens...")
+        self.top_status_pill.setText("Running")
+        self.progress_bar.setValue(0)
+        self.downloader_thread.start()
+
+    def update_progress(self, percent, status_text):
+        self.progress_bar.setValue(percent)
+        self.status_label.setText(f"Status: {status_text}")
+
+    def download_finished(self, status):
+        self.append_message("Assistant", f"Tarefa concluída com status: {status}")
+        self.status_label.setText(f"Status: {status}")
+        self.top_status_pill.setText("Ready")
+        self.progress_bar.setValue(100)
+
+
+class SitemapExtractorGUI(QWidget):
+    """Sub-aba que extrai URLs de sitemaps e permite comparar com lista externa."""
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        layout = QVBoxLayout(self)
+
+        # ---------- STEP 1: SITEMAP ----------
+        layout.addWidget(QLabel("Step 1 – Sitemap Index URL:"))
+
+        top_row = QHBoxLayout()
+
+        self.input_url = QLineEdit()
+        self.input_url.setPlaceholderText("Ex: https://www.site.com/sitemap.xml")
+
+        # botão principal roxo
+        self.load_btn = QPushButton("Load Sitemaps")
+        self.load_btn.setProperty("accent", True)
+
+        self.clear_btn = QPushButton("Clear")
+
+        top_row.addWidget(self.input_url)
+        top_row.addWidget(self.load_btn)
+        top_row.addWidget(self.clear_btn)
+        layout.addLayout(top_row)
+
+        # ---------- LOG OUTPUT ----------
+        layout.addWidget(QLabel("Log Output:"))
+        self.log_box = QTextEdit()
+        self.log_box.setReadOnly(True)
+        layout.addWidget(self.log_box)
+
+        # ---------- STATS + URLS EXTRAÍDAS ----------
+        self.stats_label = QLabel("Sub-sitemaps: 0 | URLs: 0 | Unique: 0")
+        layout.addWidget(self.stats_label)
+
+        layout.addWidget(QLabel("Step 2 – Extracted URLs (from sitemap):"))
+        self.result_box = QTextEdit()
+        self.result_box.setReadOnly(False)
+        layout.addWidget(self.result_box)
+
+        export_layout = QHBoxLayout()
+        self.btn_tsv = QPushButton("Copy TSV")
+        self.btn_csv = QPushButton("Copy CSV")
+        self.btn_list = QPushButton("Copy List")
+        export_layout.addWidget(self.btn_tsv)
+        export_layout.addWidget(self.btn_csv)
+        export_layout.addWidget(self.btn_list)
+        layout.addLayout(export_layout)
+
+        # ---------- COMPARE SECTION ----------
+        layout.addWidget(QLabel("Step 3 – Compare with Excel URLs:"))
+        self.compare_box = QTextEdit()
+        self.compare_box.setPlaceholderText("Cole aqui as URLs vindas do Excel, uma por linha")
+        layout.addWidget(self.compare_box)
+
+        self.compare_btn = QPushButton("Compare")
+        self.compare_btn.setEnabled(False)              # começa desativado
+        self.compare_btn.setProperty("accent", False)   # ainda sem roxo
+        layout.addWidget(self.compare_btn)
+
+        # ---------- OUTPUT DETALHADO DO COMPARE ----------
+        layout.addWidget(QLabel("Compare output:"))
+        self.compare_output_box = QTextEdit()
+        self.compare_output_box.setReadOnly(True)
+        layout.addWidget(self.compare_output_box)
+
+        # ---------- CONNECTIONS ----------
+        self.load_btn.clicked.connect(self.run_extractor)
+        self.clear_btn.clicked.connect(self.clear_all)
+
+        self.btn_list.clicked.connect(self.copy_list)
+        self.btn_tsv.clicked.connect(self.copy_tsv)
+        self.btn_csv.clicked.connect(self.copy_csv)
+        self.compare_btn.clicked.connect(self.compare_lists)
+
+    def set_compare_ready(self, ready: bool):
+        """Ativa/desativa o botão Compare e aplica o roxo quando estiver pronto."""
+        self.compare_btn.setEnabled(ready)
+        self.compare_btn.setProperty("accent", ready)
+        # força o Qt a reaplicar o estilo quando a property muda
+        self.compare_btn.style().unpolish(self.compare_btn)
+        self.compare_btn.style().polish(self.compare_btn)
+
+    # ---------- Helpers de log ----------
+    def log(self, txt):
+        self.log_box.append(txt)
+
+    # ---------- Fluxo principal ----------
+    def clear_all(self):
+        self.result_box.clear()
+        self.log_box.clear()
+        self.compare_box.clear()
+        self.compare_output_box.clear()
+        self.stats_label.setText("Sub-sitemaps: 0 | URLs: 0 | Unique: 0")
+        self.set_compare_ready(False)
+
+    async def fetch_xml(self, url, session):
+        try:
+            async with session.get(url, ssl=False) as r:
+                if r.status != 200:
+                    self.log(f"[ERROR] {url} – status {r.status}")
+                    return None
+                return await r.text()
+        except Exception as e:
+            self.log(f"[ERROR] {url} – {e}")
+            return None
+
+    async def run_async(self, url):
+        import xml.etree.ElementTree as ET
+        urls, submaps = [], []
+
+        async with aiohttp.ClientSession(headers=HEADERS) as session:
+            self.log("[INIT] Fetching sitemap root...")
+            xml_root = await self.fetch_xml(url, session)
+            if not xml_root:
+                return [], []
+
+            try:
+                root = ET.fromstring(xml_root)
+            except Exception as e:
+                self.log(f"[ERROR] Could not parse root sitemap XML: {e}")
+                return [], []
+
+            # remove namespace do tag, se existir
+            root_tag = root.tag.split('}')[-1].lower()
+
+            # ---------- CASO 1: sitemapindex (tem sub-sitemaps) ----------
+            if root_tag == "sitemapindex":
+                self.log("[INFO] Root is <sitemapindex> (has sub-sitemaps).")
+
+                # pega apenas locs dentro de <sitemap>
+                for sm_loc in root.iterfind(".//{*}sitemap/{*}loc"):
+                    if sm_loc.text:
+                        sm_url = sm_loc.text.strip()
+                        submaps.append(sm_url)
+
+                self.log(f"[INFO] Found {len(submaps)} sub-sitemaps.")
+
+                for i, sm in enumerate(submaps, 1):
+                    self.log(f"[FETCH] ({i}/{len(submaps)}) {sm}")
+                    xml_sub = await self.fetch_xml(sm, session)
+                    if not xml_sub:
+                        continue
+
+                    try:
+                        r = ET.fromstring(xml_sub)
+                        # aqui esperamos um <urlset> com <url><loc>...</loc></url>
+                        for loc in r.iterfind(".//{*}url/{*}loc"):
+                            if loc.text:
+                                urls.append(loc.text.strip())
+                    except Exception as e:
+                        self.log(f"[PARSE ERROR] Could not parse sub-sitemap {sm}: {e}")
+
+            # ---------- CASO 2: urlset (sitemap "plano", sem sub-sitemaps) ----------
+            elif root_tag == "urlset":
+                self.log("[INFO] Root is <urlset> (no nested sub-sitemaps).")
+                for loc in root.iterfind(".//{*}url/{*}loc"):
+                    if loc.text:
+                        urls.append(loc.text.strip())
+
+            # ---------- CASO 3: outro formato (fallback genérico) ----------
+            else:
+                self.log(f"[WARN] Unknown root tag '{root_tag}', using generic <loc> parsing.")
+                for loc in root.iterfind(".//{*}loc"):
+                    if loc.text:
+                        urls.append(loc.text.strip())
+
+        return urls, submaps
+
+    def run_extractor(self):
+        url = self.input_url.text().strip()
+        if not url:
+            QMessageBox.warning(self, "Error", "Enter a sitemap URL.")
+            return
+
+        # reset parcial
+        self.result_box.clear()
+        self.compare_output_box.clear()
+        self.stats_label.setText("Sub-sitemaps: 0 | URLs: 0 | Unique: 0")
+        self.set_compare_ready(False)
+
+        self.log_box.clear()
+        self.log(f"[START] Processing sitemap: {url}")
+
+        # estamos no thread da UI => usamos asyncio.run
+        try:
+            asyncio.run(self._exec(url))
+        except RuntimeError:
+            # fallback caso algum loop já exista
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(self._exec(url))
+            loop.close()
+
+    async def _exec(self, url):
+        urls, submaps = await self.run_async(url)
+        unique = sorted(set(urls))
+        self.result_box.setPlainText("\n".join(unique))
+        self.stats_label.setText(
+            f"Sub-sitemaps: {len(submaps)} | URLs: {len(urls)} | Unique: {len(unique)}"
+        )
+        self.set_compare_ready(bool(unique))
+        self.log("[DONE] Sitemap extraction complete.")
+
+    # ---------- Export helpers ----------
+    def copy_list(self):
+        QApplication.clipboard().setText(self.result_box.toPlainText())
+
+    def copy_tsv(self):
+        lines = [l for l in self.result_box.toPlainText().splitlines() if l.strip()]
+        QApplication.clipboard().setText("\n".join(f"{l}\t" for l in lines))
+
+    def copy_csv(self):
+        lines = [l for l in self.result_box.toPlainText().splitlines() if l.strip()]
+        QApplication.clipboard().setText("\n".join(f"{l}," for l in lines))
+
+    # ---------- Compare fluxo ----------
+    def compare_lists(self):
+        extracted_raw = self.result_box.toPlainText().strip()
+        if not extracted_raw:
+            QMessageBox.warning(self, "No data", "Load a sitemap first to have URLs to compare.")
+            return
+
+        extracted = set(l.strip() for l in extracted_raw.splitlines() if l.strip())
+        pasted = [v.strip() for v in self.compare_box.toPlainText().splitlines() if v.strip()]
+
+        if not pasted:
+            QMessageBox.warning(self, "No input", "Paste at least one URL from Excel to compare.")
+            return
+
+        found, missing = [], []
+        for p in pasted:
+            if p in extracted:
+                found.append(p)
+            else:
+                missing.append(p)
+
+        # ---- Relatório detalhado para o usuário (no campo próprio) ----
+        report_lines = []
+        report_lines.append("===== COMPARE REPORT =====")
+        report_lines.append(f"Total pasted (Excel): {len(pasted)}")
+        report_lines.append(f"Found in sitemap:     {len(found)}")
+        report_lines.append(f"Not found (missing):  {len(missing)}")
+        report_lines.append("")
+
+        report_lines.append("--- FOUND (present in sitemap) ---")
+        if found:
+            report_lines.extend(f"✔ {u}" for u in found)
+        else:
+            report_lines.append("(none)")
+        report_lines.append("")
+
+        report_lines.append("--- NOT FOUND (missing from sitemap) ---")
+        if missing:
+            report_lines.extend(f"✘ {u}" for u in missing)
+        else:
+            report_lines.append("(none)")
+        report_lines.append("")
+        report_lines.append("===== END OF REPORT =====")
+
+        self.compare_output_box.setPlainText("\n".join(report_lines))
+
+        # loga só o resumo
+        self.log(f"[COMPARE] Pasted: {len(pasted)} — Found: {len(found)} — Not found: {len(missing)}")
+
+        # salva para arquivo (estilo Web Crawler)
+        self.save_compare_report_to_excel(pasted, found, missing)
+
+        QMessageBox.information(
+            self,
+            "Compare Results",
+            (
+                f"Pasted (Excel): {len(pasted)}\n"
+                f"Found in sitemap: {len(found)}\n"
+                f"Not found: {len(missing)}\n\n"
+                "Detailed output is shown abaixo do botão Compare e um arquivo Excel foi gerado."
+            )
+        )
+
+    def save_compare_report_to_excel(self, pasted, found, missing):
+        # Pergunta onde salvar
+        folder = QFileDialog.getExistingDirectory(self, "Select folder to save compare report")
+        if not folder:
+            self.log("[COMPARE] User cancelled saving Excel report.")
+            return
+
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"sitemap_compare_{ts}.xlsx"
+        path = os.path.join(folder, filename)
+
+        wb = Workbook()
+
+        # Summary
+        ws_sum = wb.active
+        ws_sum.title = "Summary"
+        ws_sum.append(["Metric", "Value"])
+        ws_sum.append(["Total pasted (Excel)", len(pasted)])
+        ws_sum.append(["Found in sitemap", len(found)])
+        ws_sum.append(["Not found", len(missing)])
+
+        # Found
+        ws_found = wb.create_sheet("Found")
+        ws_found.append(["URL"])
+        for u in found:
+            ws_found.append([u])
+
+        # Not found
+        ws_missing = wb.create_sheet("NotFound")
+        ws_missing.append(["URL"])
+        for u in missing:
+            ws_missing.append([u])
+
+        wb.save(path)
+        self.log(f"[COMPARE] Excel report saved to: {path}")
+
+class BrokenLinkInspectorGUI(QWidget):
+    """Sub-aba 'Broken Link Inspector' dentro do Crawler."""
+    def __init__(self):
+        super().__init__()
+        self.worker = None
+        self.results = []
+        self.initUI()
+
+    def initUI(self):
+        layout = QVBoxLayout(self)
+
+        title = QLabel("Broken Link Inspector")
+        title.setObjectName("Title")
+        layout.addWidget(title)
+
+        # --------- Mode selection ----------
+        mode_group = QGroupBox("Mode")
+        mode_layout = QHBoxLayout()
+        self.mode_single = QRadioButton("Single page checkup")
+        self.mode_sitemap = QRadioButton("Sitemap audit (via sitemap.xml)")
+        self.mode_single.setChecked(True)
+        mode_layout.addWidget(self.mode_single)
+        mode_layout.addWidget(self.mode_sitemap)
+        mode_group.setLayout(mode_layout)
+        layout.addWidget(mode_group)
+
+        # --------- URL input ----------
+        url_layout = QHBoxLayout()
+        self.url_input = QLineEdit()
+        self.url_input.setPlaceholderText("Ex (single): https://www.site.com/page")
+        url_layout.addWidget(QLabel("URL:"))
+        url_layout.addWidget(self.url_input)
+        layout.addLayout(url_layout)
+
+        # --------- Options ----------
+        self.same_domain_cb = QCheckBox("Only same-domain links (single page)")
+        self.same_domain_cb.setChecked(True)
+        layout.addWidget(self.same_domain_cb)
+
+        # --------- Controls ----------
+        controls = QHBoxLayout()
+        self.run_btn = QPushButton("Run check")
+        self.run_btn.setProperty("accent", True)
+
+        self.stop_btn = QPushButton("Stop")
+        self.stop_btn.setEnabled(False)
+
+        self.export_btn = QPushButton("Export Excel")
+        self.export_btn.setEnabled(False)
+        self.export_btn.setProperty("accent", False)
+
+        self.clear_btn = QPushButton("Clear")
+
+        controls.addWidget(self.run_btn)
+        controls.addWidget(self.stop_btn)
+        controls.addWidget(self.export_btn)
+        controls.addWidget(self.clear_btn)
+        layout.addLayout(controls)
+
+        # --------- Progress + stats ----------
+        self.progress = QProgressBar()
+        layout.addWidget(self.progress)
+
+        self.stats_label = QLabel("Checked: 0 | OK: 0 | Redirect: 0 | 4xx: 0 | 5xx: 0 | Errors: 0")
+        layout.addWidget(self.stats_label)
+
+        # --------- Results ----------
+        layout.addWidget(QLabel("Results (broken first):"))
+        self.results_box = QTextEdit()
+        self.results_box.setReadOnly(True)
+        layout.addWidget(self.results_box)
+
+        # --------- Log ----------
+        layout.addWidget(QLabel("Log:"))
+        self.log_box = QTextEdit()
+        self.log_box.setReadOnly(True)
+        layout.addWidget(self.log_box)
+
+        # Connections
+        self.mode_single.toggled.connect(self._on_mode_change)
+        self.run_btn.clicked.connect(self.start_check)
+        self.stop_btn.clicked.connect(self.stop_check)
+        self.export_btn.clicked.connect(self.export_results)
+        self.clear_btn.clicked.connect(self.clear_all)
+
+        self._on_mode_change(self.mode_single.isChecked())
+
+    def _on_mode_change(self, is_single: bool):
+        if self.mode_single.isChecked():
+            self.url_input.setPlaceholderText("Ex (single): https://www.site.com/page")
+            self.same_domain_cb.setEnabled(True)
+        else:
+            self.url_input.setPlaceholderText("Ex (sitemap): https://www.site.com/sitemap.xml")
+            self.same_domain_cb.setEnabled(False)
+
+    def log(self, msg: str):
+        self.log_box.append(msg)
+
+    def set_export_ready(self, ready: bool):
+        self.export_btn.setEnabled(ready)
+        self.export_btn.setProperty("accent", ready)
+        self.export_btn.style().unpolish(self.export_btn)
+        self.export_btn.style().polish(self.export_btn)
+
+    def clear_all(self):
+        if self.worker and self.worker.isRunning():
+            QMessageBox.warning(self, "Busy", "Stop the current run before clearing.")
+            return
+        self.results = []
+        self.results_box.clear()
+        self.log_box.clear()
+        self.progress.setValue(0)
+        self.stats_label.setText("Checked: 0 | OK: 0 | Redirect: 0 | 4xx: 0 | 5xx: 0 | Errors: 0")
+        self.set_export_ready(False)
+
+    def start_check(self):
+        if self.worker and self.worker.isRunning():
+            QMessageBox.warning(self, "Busy", "A check is already running.")
+            return
+
+        url = self.url_input.text().strip()
+        if not url:
+            QMessageBox.warning(self, "Input Error", "Please enter a URL.")
+            return
+
+        if not url.startswith("http://") and not url.startswith("https://"):
+            url = "https://" + url
+
+        mode = "single" if self.mode_single.isChecked() else "sitemap"
+        same_domain = self.same_domain_cb.isChecked()
+
+        self.results = []
+        self.results_box.clear()
+        self.progress.setValue(0)
+        self.set_export_ready(False)
+
+        self.log_box.clear()
+        self.log(f"[START] Mode={mode}, URL={url}")
+
+        self.run_btn.setEnabled(False)
+        self.stop_btn.setEnabled(True)
+
+        self.worker = BrokenLinkWorker(mode=mode, root_url=url, same_domain_only=same_domain)
+        self.worker.progress_update.connect(self.progress.setValue)
+        self.worker.log_update.connect(self.log)
+        self.worker.finished.connect(self.on_worker_finished)
+        self.worker.start()
+
+    def stop_check(self):
+        if self.worker and self.worker.isRunning():
+            self.worker.stop()
+            self.log("[WARN] Stop requested by user.")
+            self.stop_btn.setEnabled(False)
+
+    def on_worker_finished(self, results: list):
+        self.results = results or []
+        self.run_btn.setEnabled(True)
+        self.stop_btn.setEnabled(False)
+
+        self._render_results()
+        self.set_export_ready(bool(self.results))
+
+    def _render_results(self):
+        if not self.results:
+            self.stats_label.setText("Checked: 0 | OK: 0 | Redirect: 0 | 4xx: 0 | 5xx: 0 | Errors: 0")
+            self.results_box.setPlainText("No results.")
+            return
+
+        total = len(self.results)
+        ok = sum(1 for r in self.results if r["category"] == "ok")
+        redirect = sum(1 for r in self.results if r["category"] == "redirect")
+        c4 = sum(1 for r in self.results if r["category"] == "client_error")
+        c5 = sum(1 for r in self.results if r["category"] == "server_error")
+        err = sum(1 for r in self.results if r["category"] == "network_error")
+
+        self.stats_label.setText(
+            f"Checked: {total} | OK: {ok} | Redirect: {redirect} | 4xx: {c4} | 5xx: {c5} | Errors: {err}"
+        )
+
+        def fmt(r):
+            status = r["status"] if r["status"] is not None else "ERR"
+            cat = r["category"]
+            src = r["url"]
+            dst = r.get("final_url") or ""
+
+            # para redirects, mostra origem -> destino
+            if cat == "redirect" and dst and dst != src:
+                return f"[{status}] ({cat}) {src}  ->  {dst}"
+
+            # demais casos, mantemos só a URL original
+            return f"[{status}] ({cat}) {src}"
+
+        broken_first = [
+            r for r in self.results
+            if r["category"] in ("client_error", "server_error", "network_error")
+        ]
+        redirects = [r for r in self.results if r["category"] == "redirect"]
+        oks = [r for r in self.results if r["category"] == "ok"]
+
+        lines = []
+
+        if broken_first:
+            lines.append("=== BROKEN / ERROR ===")
+            lines.extend(fmt(r) for r in broken_first)
+            lines.append("")
+
+        if redirects:
+            lines.append("=== REDIRECTS ===")
+            lines.extend(fmt(r) for r in redirects)
+            lines.append("")
+
+        if oks:
+            lines.append("=== OK ===")
+            lines.extend(fmt(r) for r in oks)
+
+        self.results_box.setPlainText("\n".join(lines))
+
+    def export_results(self):
+        if not self.results:
+            QMessageBox.warning(self, "No data", "No results to export.")
+            return
+
+        folder = QFileDialog.getExistingDirectory(self, "Select folder to save broken link report")
+        if not folder:
+            self.log("[EXPORT] User cancelled export.")
+            return
+
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        mode = "single" if self.mode_single.isChecked() else "sitemap"
+        filename = f"broken_links_{mode}_{ts}.xlsx"
+        path = os.path.join(folder, filename)
+
+        wb = Workbook()
+
+        # Summary
+        ws_sum = wb.active
+        ws_sum.title = "Summary"
+        ws_sum.append(["Metric", "Value"])
+
+        total = len(self.results)
+        ok = sum(1 for r in self.results if r["category"] == "ok")
+        redirect = sum(1 for r in self.results if r["category"] == "redirect")
+        c4 = sum(1 for r in self.results if r["category"] == "client_error")
+        c5 = sum(1 for r in self.results if r["category"] == "server_error")
+        err = sum(1 for r in self.results if r["category"] == "network_error")
+
+        ws_sum.append(["Total checked", total])
+        ws_sum.append(["OK (2xx)", ok])
+        ws_sum.append(["Redirect (3xx)", redirect])
+        ws_sum.append(["Client error (4xx)", c4])
+        ws_sum.append(["Server error (5xx)", c5])
+        ws_sum.append(["Network / other errors", err])
+
+        # All results
+        ws_all = wb.create_sheet("All")
+        ws_all.append(["URL", "Status", "Category", "Final URL", "Error"])
+        for r in self.results:
+            ws_all.append([
+                r["url"],
+                r["status"],
+                r["category"],
+                r["final_url"],
+                r["error"],
+            ])
+
+        # Broken only
+        ws_broken = wb.create_sheet("Broken")
+        ws_broken.append(["URL", "Status", "Category", "Final URL", "Error"])
+        for r in self.results:
+            if r["category"] in ("client_error", "server_error", "network_error"):
+                ws_broken.append([
+                    r["url"],
+                    r["status"],
+                    r["category"],
+                    r["final_url"],
+                    r["error"],
+                ])
+
+        wb.save(path)
+        self.log(f"[EXPORT] Excel report saved to: {path}")
+        QMessageBox.information(self, "Export", f"Report saved to:\n{path}")
+
+
+class CrawlerMainGUI(QWidget):
+    """Container principal de 'Crawler' contendo as sub-abas:
+        - Web Crawler
+        - Sitemap Extractor
+    """
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+
+    def initUI(self):
+        layout = QVBoxLayout(self)
+
+        title = QLabel("Crawler")
+        title.setObjectName("Title")
+        layout.addWidget(title)
+
+        self.subtabs = QTabWidget()
+        layout.addWidget(self.subtabs)
+
+        # Aba original
+        self.webcrawler_tab = CrawlerGUI()
+        self.subtabs.addTab(self.webcrawler_tab, "Web Crawler")
+
+        # Nova aba
+        self.sitemap_tab = SitemapExtractorGUI()
+        self.subtabs.addTab(self.sitemap_tab, "Sitemap")
+
+        # Aba Broken Links
+        self.broken_tab = BrokenLinkInspectorGUI()
+        self.subtabs.addTab(self.broken_tab, "Broken Links")
+
 # --------------------- Main Application ---------------------
 class MainApp(QWidget):
     """
@@ -1302,6 +2705,7 @@ class MainApp(QWidget):
     """
     def __init__(self):
         super().__init__()
+        self.setObjectName("MainApp")  # importante p/ o estilo
         self.initUI()
 
     def initUI(self):
@@ -1319,42 +2723,49 @@ class MainApp(QWidget):
             pass
 
         self.tabs = QTabWidget()
-        self.crawler_tab = CrawlerGUI()
+        self.crawler_tab = CrawlerMainGUI()
         self.downloader_tab = ImageDownloaderGUI()
         self.compressor_tab = ImageCompressorGUI()
         self.resizer_tab = ImageResizerGUI()
+        self.chatbot_tab = ChatbotTab(parent=self)
         self.about_tab = AboutTab()
 
-        self.tabs.addTab(self.crawler_tab, "Web Crawler")
+        self.tabs.addTab(self.crawler_tab, "Crawler")
         self.tabs.addTab(self.downloader_tab, "Image Downloader")
         self.tabs.addTab(self.compressor_tab, "Image Compressor")
         self.tabs.addTab(self.resizer_tab, "Image Resizer")
-        self.tabs.addTab(self.about_tab, "About") # <-- This is the tab name
+        self.tabs.addTab(self.about_tab, "About")
+        self.tabs.addTab(self.chatbot_tab, "Assistant")
 
         layout.addWidget(self.tabs)
         self.setLayout(layout)
         self.setWindowTitle("Multitool - Websites & Search") # <-- UPDATE THIS LINE
         self.resize(1000, 800)
         self.show()
+        self.setStyleSheet(DARK_STYLE)
 
-    def closeEvent(self, event):
-        """
-        Ensures all running background threads are stopped before closing the application.
-        """
-        threads_to_stop = [
-            self.crawler_tab.crawler_thread,
-            self.downloader_tab.all_images_tab.downloader_thread,
-            self.downloader_tab.excel_tab.image_thread,
-            self.downloader_tab.url_tab.image_thread,
-            self.compressor_tab.image_thread,
-        ]
+def closeEvent(self, event):
+    # pega o thread do crawler, considerando o container novo
+    crawler_thread = None
+    if isinstance(self.crawler_tab, CrawlerMainGUI):
+        crawler_thread = self.crawler_tab.webcrawler_tab.crawler_thread
+    else:
+        crawler_thread = getattr(self.crawler_tab, "crawler_thread", None)
 
-        for thread in threads_to_stop:
-            if thread and thread.isRunning():
-                thread.stop()
-                thread.wait() # Wait for thread to finish
+    threads_to_stop = [
+        crawler_thread,
+        getattr(self.downloader_tab.all_images_tab, "downloader_thread", None),
+        getattr(self.downloader_tab.excel_tab, "image_thread", None),
+        getattr(self.downloader_tab.url_tab, "image_thread", None),
+        getattr(self.compressor_tab, "image_thread", None),
+    ]
 
-        event.accept()
+    for thread in threads_to_stop:
+        if thread and thread.isRunning():
+            thread.stop()
+            thread.wait()
+
+    event.accept()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
